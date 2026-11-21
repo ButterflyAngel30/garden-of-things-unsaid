@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Garden of Things Unsaid</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-top: #091322;
+      --bg-mid: #12243c;
+      --bg-bot: #1a334e;
+      --card-bg: rgba(14, 26, 44, 0.72);
+      --card-border: rgba(173, 216, 255, 0.22);
+      --text-main: #eef5fc;
+      --text-muted: #a6bdd6;
+      --accent: #8ecae6;
+      --accent-gold: #f4c977;
+      --accent-glow: rgba(142, 202, 230, 0.35);
+      --parchment-bg: #f6eedc;
+      --parchment-ink: #3b2d22;
+      --parchment-border: #d9c6a3;
+      --transition-slow: 1.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    body.spring-mode {
+      --bg-top: #1d263b;
+      --bg-mid: #3a3248;
+      --bg-bot: #7a4e48;
+      --card-bg: rgba(34, 25, 36, 0.74);
+      --card-border: rgba(244, 201, 119, 0.35);
+      --text-main: #fff8ee;
+      --text-muted: #e6cfb3;
+      --accent: #f4c977;
+      --accent-glow: rgba(244, 201, 119, 0.45);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: var(--text-main);
+      background: linear-gradient(170deg, var(--bg-top) 0%, var(--bg-mid) 52%, var(--bg-bot) 100%);
+      transition: background var(--transition-slow), color 0.8s ease;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    /* Ambient Glow Overlay */
+    .ambient-sun {
+      position: fixed;
+      top: -20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90vw;
+      height: 70vh;
+      background: radial-gradient(circle, rgba(255, 214, 138, 0.28) 0%, rgba(255, 179, 107, 0.08) 45%, transparent 72%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 2.2s ease;
+      z-index: 0;
+    }
+
+    body.spring-mode .ambient-sun {
+      opacity: 1;
+    }
+
+    #particle-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Header & Inventory Bar */
+    .top-bar {
+      width: 100%;
+      max-width: 760px;
+      padding: 18px 20px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      z-index: 10;
+    }
+
+    .inventory {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(10, 19, 34, 0.6);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(12px);
+      padding: 8px 14px;
+      border-radius: 999px;
+      transition: border-color 1s ease, background 1s ease;
+    }
+
+    body.spring-mode .inventory {
+      background: rgba(42, 28, 36, 0.65);
+    }
+
+    .inv-slot {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      opacity: 0.4;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+
+    .inv-slot.unlocked {
+      opacity: 1;
+      color: var(--accent-gold);
+      background: rgba(244, 201, 119, 0.12);
+      text-shadow: 0 0 10px rgba(244, 201, 119, 0.4);
+      transform: scale(1.04);
+    }
+
+    .inv-slot svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+    }
+
+    .sound-btn {
+      background: rgba(10, 19, 34, 0.6);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      backdrop-filter: blur(12px);
+      border-radius: 999px;
+      padding: 8px 13px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .sound-btn:hover {
+      color: var(--text-main);
+      border-color: var(--accent);
+    }
+
+    /* Main Stage Container */
+    main {
+      width: 100%;
+      max-width: 680px;
+      padding: 20px 20px 60px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      z-index: 5;
+    }
+
+    .scene-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 24px;
+      padding: 36px 32px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
+      transition: opacity 0.55s ease, transform 0.55s ease, border-color 1s ease, background 1s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .scene-card.fade-out {
+      opacity: 0;
+      transform: translateY(14px) scale(0.985);
+    }
+
+    .scene-card.fade-in {
+      animation: cardEnter 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes cardEnter {
+      from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .eyebrow {
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--accent);
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    h1, h2 {
+      font-family: 'Cinzel', serif;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      line-height: 1.25;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: clamp(1.85rem, 4.5vw, 2.5rem);
+    }
+
+    h2 {
+      font-size: clamp(1.45rem, 3.5vw, 1.9rem);
+    }
+
+    .story-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.28rem;
+      line-height: 1.65;
+      color: var(--text-main);
+      font-style: italic;
+      margin-bottom: 24px;
+      opacity: 0.94;
+    }
+
+    .puzzle-box {
+      background: rgba(7, 14, 26, 0.52);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 22px 20px;
+      margin-bottom: 20px;
+    }
+
+    .puzzle-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    /* Trial 1: Sequence */
+    .sequence-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .seq-tile {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(173, 216, 255, 0.22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cinzel', serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .seq-tile.mystery {
+      background: rgba(142, 202, 230, 0.16);
+      border-color: var(--accent);
+      color: var(--accent-gold);
+      box-shadow: 0 0 18px rgba(142, 202, 230, 0.25);
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      max-width: 320px;
+      margin: 0 auto;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text-main);
+      font-size: 1rem;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    /* Buttons & Option Cards */
+    .btn-primary {
+      background: linear-gradient(135deg, #8ecae6 0%, #5fa8d3 100%);
+      color: #081220;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px rgba(142, 202, 230, 0.35);
+      filter: brightness(1.05);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #f6d388 0%, #e0a952 100%);
+      color: #241709;
+      box-shadow: 0 8px 24px rgba(244, 201, 119, 0.3);
+    }
+
+    .btn-gold:hover {
+      box-shadow: 0 10px 28px rgba(244, 201, 119, 0.5);
+    }
+
+    /* Trial 2: Mirror Pond Cards */
+    .mirror-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .choice-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(173, 216, 255, 0.2);
+      border-radius: 14px;
+      padding: 18px 10px;
+      text-align: center;
+      font-family: 'Cinzel', serif;
+      font-size: 1.15rem;
+      letter-spacing: 0.14em;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.28s ease;
+    }
+
+    .choice-card:hover {
+      background: rgba(142, 202, 230, 0.14);
+      border-color: var(--accent);
+      transform: translateY(-3px);
+    }
+
+    /* Trial 3: Gates */
+    .gates-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .gate-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(173, 216, 255, 0.2);
+      border-radius: 14px;
+      padding: 15px 18px;
+      text-align: left;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.28s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .gate-btn:hover {
+      background: rgba(142, 202, 230, 0.13);
+      border-color: var(--accent);
+      transform: translateX(4px);
+    }
+
+    .gate-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.92rem;
+      color: var(--accent-gold);
+      letter-spacing: 0.08em;
+    }
+
+    .gate-quote {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.18rem;
+      color: var(--text-main);
+    }
+
+    /* Trial 4: Sleeping Library Interactive Page */
+    .book-page {
+      background: var(--parchment-bg);
+      color: var(--parchment-ink);
+      border-radius: 14px;
+      padding: 22px 20px;
+      border: 1px solid var(--parchment-border);
+      box-shadow: inset 0 0 24px rgba(139, 108, 66, 0.14);
+    }
+
+    .book-header {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      text-align: center;
+      color: #856b4d;
+      margin-bottom: 8px;
+    }
+
+    .book-sub {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-weight: 600;
+      font-size: 1.2rem;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(133, 107, 77, 0.25);
+    }
+
+    .book-line {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.22rem;
+      line-height: 1.85;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .first-letter {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 30px;
+      border-radius: 6px;
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      background: rgba(133, 107, 77, 0.1);
+      border: 1px solid rgba(133, 107, 77, 0.25);
+      margin-right: 2px;
+    }
+
+    .first-letter:hover {
+      background: rgba(212, 163, 73, 0.28);
+      transform: scale(1.08);
+    }
+
+    .first-letter.selected {
+      background: #d49b38;
+      color: #fff;
+      border-color: #b57d1e;
+      box-shadow: 0 4px 12px rgba(212, 155, 56, 0.4);
+    }
+
+    .seq-status {
+      margin-top: 14px;
+      font-size: 0.85rem;
+      color: #6e563a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .reset-letters {
+      background: none;
+      border: none;
+      color: #8c6230;
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 0.82rem;
+    }
+
+    /* Hints & Feedback */
+    .helper-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .hint-toggle {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.84rem;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.2s ease;
+    }
+
+    .hint-toggle:hover {
+      color: var(--accent);
+    }
+
+    .hint-text {
+      display: none;
+      width: 100%;
+      font-size: 0.88rem;
+      color: var(--accent);
+      background: rgba(142, 202, 230, 0.08);
+      border-left: 2px solid var(--accent);
+      padding: 8px 12px;
+      border-radius: 0 8px 8px 0;
+      margin-top: 6px;
+    }
+
+    .hint-text.visible {
+      display: block;
+      animation: fadeInSoft 0.35s ease;
+    }
+
+    .feedback-msg {
+      min-height: 22px;
+      font-size: 0.9rem;
+      color: #f7b299;
+      text-align: center;
+      margin-top: 10px;
+      transition: opacity 0.3s ease;
+    }
+
+    .shake {
+      animation: gentleShake 0.42s ease;
+    }
+
+    @keyframes gentleShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      50% { transform: translateX(6px); }
+      75% { transform: translateX(-4px); }
+    }
+
+    @keyframes fadeInSoft {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Reward Interstitial Overlay */
+    .reward-view {
+      text-align: center;
+      padding: 14px 6px;
+    }
+
+    .reward-icon-ring {
+      width: 82px;
+      height: 82px;
+      margin: 0 auto 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(244, 201, 119, 0.28) 0%, rgba(244, 201, 119, 0.04) 70%);
+      border: 1px solid rgba(244, 201, 119, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-gold);
+      box-shadow: 0 0 32px rgba(244, 201, 119, 0.3);
+      animation: floatPulse 3s ease-in-out infinite;
+    }
+
+    .reward-icon-ring svg {
+      width: 36px;
+      height: 36px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+    }
+
+    @keyframes floatPulse {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .reward-badge {
+      display: inline-block;
+      font-size: 0.78rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent-gold);
+      background: rgba(244, 201, 119, 0.12);
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+
+    /* Final Chamber & Parchment Letter / Poem */
+    .chamber-relics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 22px 0;
+    }
+
+    .relic-tile {
+      background: rgba(244, 201, 119, 0.08);
+      border: 1px solid rgba(244, 201, 119, 0.3);
+      border-radius: 14px;
+      padding: 14px 8px;
+      text-align: center;
+      color: var(--accent-gold);
+      font-size: 0.82rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .relic-tile svg {
+      width: 24px;
+      height: 24px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+    }
+
+    .parchment-sheet {
+      background: var(--parchment-bg);
+      color: var(--parchment-ink);
+      border-radius: 20px;
+      padding: 36px 30px;
+      border: 1px solid var(--parchment-border);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), inset 0 0 40px rgba(163, 128, 78, 0.14);
+      position: relative;
+    }
+
+    .parchment-sheet h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 2rem;
+      color: #4a3525;
+      margin-bottom: 18px;
+    }
+
+    .letter-body p {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.98rem;
+      line-height: 1.75;
+      color: #463527;
+      margin-bottom: 15px;
+    }
+
+    .parchment-divider {
+      border: none;
+      height: 1px;
+      background: rgba(122, 92, 58, 0.25);
+      margin: 22px 0 16px;
+    }
+
+    .parchment-footer-note {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 1.15rem;
+      color: #6b4f35;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* Poem Stanza Fade-In */
+    .poem-title {
+      font-family: 'Cinzel', serif;
+      font-size: 2.1rem;
+      text-align: center;
+      letter-spacing: 0.14em;
+      color: #3d2817;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(122, 92, 58, 0.28);
+      margin-bottom: 26px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 1.1s ease, transform 1.1s ease;
+    }
+
+    .poem-title.revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .stanza {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 1.32rem;
+      line-height: 1.7;
+      color: #352417;
+      margin-bottom: 22px;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 1.2s ease, transform 1.2s ease;
+    }
+
+    .stanza.revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .poem-postscript {
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+
+    .poem-postscript.revealed {
+      opacity: 1;
+    }
+
+    footer {
+      z-index: 10;
+      padding: 12px 20px 24px;
+      text-align: center;
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      opacity: 0.65;
+    }
+
+    .reset-all-btn {
+      background: none;
+      border: none;
+      color: inherit;
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: inherit;
+    }
+
+    @media (max-width: 540px) {
+      .scene-card, .parchment-sheet {
+        padding: 26px 20px;
+      }
+      .inv-slot span {
+        display: none;
+      }
+      .mirror-grid {
+        grid-template-columns: 1fr;
+      }
+      .chamber-relics {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-sun"></div>
+  <canvas id="particle-canvas"></canvas>
+
+  <header class="top-bar">
+    <div class="inventory" aria-label="Collected Relics">
+      <div class="inv-slot" id="inv-seed" title="Golden Seed">
+        <svg viewBox="0 0 24 24"><path d="M12 20V10"/><path d="M12 14c-4 0-7-2.5-7-6 3.5 0 7 2 7 6Z"/><path d="M12 11c4 0 7-2.5 7-6-3.5 0-7 2-7 6Z"/></svg>
+        <span>Seed</span>
+      </div>
+      <div class="inv-slot" id="inv-mirror" title="Silver Mirror">
+        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="10" rx="6" ry="7"/><path d="M12 17v5"/><path d="M9 22h6"/></svg>
+        <span>Mirror</span>
+      </div>
+      <div class="inv-slot" id="inv-compass" title="Enchanted Compass">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polygon points="15.5 8.5 13.5 13.5 8.5 15.5 10.5 10.5 15.5 8.5"/></svg>
+        <span>Compass</span>
+      </div>
+      <div class="inv-slot" id="inv-key" title="Antique Golden Key">
+        <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8-8"/><path d="M16 7l2 2"/><path d="M18 5l2 2"/></svg>
+        <span>Key</span>
+      </div>
+    </div>
+
+    <button class="sound-btn" id="sound-toggle" type="button" aria-pressed="false">
+      <span id="sound-icon">🔇</span>
+      <span id="sound-label">Sound Off</span>
+    </button>
+  </header>
+
+  <main id="app-stage"></main>
+
+  <footer>
+    <span>The Garden of Things Unsaid</span> ·
+    <button class="reset-all-btn" id="reset-progress" type="button">Restart from beginning</button>
+  </footer>
+
+  <script>
+    /* =========================================
+       STATE & PERSISTENCE
+       ========================================= */
+    const STORAGE_KEY = 'garden_of_things_unsaid_v1';
+
+    const defaultState = {
+      step: 'intro', // intro | trial1 | reward1 | trial2 | reward2 | trial3 | reward3 | trial4 | reward4 | chamber | letter | poem
+      relics: {
+        seed: false,
+        mirror: false,
+        compass: false,
+        key: false
+      }
+    };
+
+    let state = loadState();
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          // Security check: prevent jumping to chamber/letter/poem without all 4 relics
+          const hasAll = parsed.relics && parsed.relics.seed && parsed.relics.mirror && parsed.relics.compass && parsed.relics.key;
+          if (['chamber', 'letter', 'poem'].includes(parsed.step) && !hasAll) {
+            return { ...defaultState };
+          }
+          return { ...defaultState, ...parsed };
+        }
+      } catch (e) {}
+      return { ...defaultState };
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {}
+      updateInventoryUI();
+    }
+
+    function updateInventoryUI() {
+      document.getElementById('inv-seed').classList.toggle('unlocked', state.relics.seed);
+      document.getElementById('inv-mirror').classList.toggle('unlocked', state.relics.mirror);
+      document.getElementById('inv-compass').classList.toggle('unlocked', state.relics.compass);
+      document.getElementById('inv-key').classList.toggle('unlocked', state.relics.key);
+
+      const isSpring = ['letter', 'poem'].includes(state.step);
+      document.body.classList.toggle('spring-mode', isSpring);
+    }
+
+    /* =========================================
+       OPTIONAL WEB AUDIO CHIMES (NO EXTERNAL FILES)
+       ========================================= */
+    let soundEnabled = false;
+    let audioCtx = null;
+
+    function playChime(type = 'success') {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const now = audioCtx.currentTime;
+        const notes = type === 'finale'
+          ? [523.25, 659.25, 783.99, 1046.50]
+          : type === 'soft'
+          ? [440, 554.37]
+          : [523.25, 659.25, 783.99];
+
+        notes.forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.11);
+          gain.gain.setValueAtTime(0.001, now + idx * 0.11);
+          gain.gain.exponentialRampToValueAtTime(0.07, now + idx * 0.11 + 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.11 + 1.1);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + idx * 0.11);
+          osc.stop(now + idx * 0.11 + 1.15);
+        });
+      } catch (e) {}
+    }
+
+    document.getElementById('sound-toggle').addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      document.getElementById('sound-icon').textContent = soundEnabled ? '🔔' : '🔇';
+      document.getElementById('sound-label').textContent = soundEnabled ? 'Sound On' : 'Sound Off';
+      document.getElementById('sound-toggle').setAttribute('aria-pressed', String(soundEnabled));
+      if (soundEnabled) playChime('soft');
+    });
+
+    /* =========================================
+       CANVAS PARTICLES (WINTER SNOW -> SPRING PETALS/LIGHT)
+       ========================================= */
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function createParticles() {
+      particles = [];
+      const count = Math.min(65, Math.floor(window.innerWidth / 18));
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          r: Math.random() * 2.6 + 1.1,
+          speedY: Math.random() * 0.65 + 0.25,
+          speedX: (Math.random() - 0.5) * 0.45,
+          alpha: Math.random() * 0.55 + 0.2,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+    }
+    createParticles();
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const isSpring = document.body.classList.contains('spring-mode');
+
+      particles.forEach(p => {
+        p.phase += 0.015;
+        if (isSpring) {
+          // Warm rising golden motes & floating petals
+          p.y -= p.speedY * 0.75;
+          p.x += Math.sin(p.phase) * 0.55;
+          if (p.y < -10) {
+            p.y = canvas.height + 10;
+            p.x = Math.random() * canvas.width;
+          }
+          ctx.fillStyle = `rgba(255, 218, 145, ${p.alpha})`;
+        } else {
+          // Gentle winter frost drifting down
+          p.y += p.speedY;
+          p.x += Math.sin(p.phase) * 0.35 + p.speedX;
+          if (p.y > canvas.height + 10) {
+            p.y = -10;
+            p.x = Math.random() * canvas.width;
+          }
+          ctx.fillStyle = `rgba(210, 235, 255, ${p.alpha})`;
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    /* =========================================
+       ICONS HELPER
+       ========================================= */
+    const icons = {
+      seed: `<svg viewBox="0 0 24 24"><path d="M12 20V10"/><path d="M12 14c-4 0-7-2.5-7-6 3.5 0 7 2 7 6Z"/><path d="M12 11c4 0 7-2.5 7-6-3.5 0-7 2-7 6Z"/></svg>`,
+      mirror: `<svg viewBox="0 0 24 24"><ellipse cx="12" cy="10" rx="6" ry="7"/><path d="M12 17v5"/><path d="M9 22h6"/></svg>`,
+      compass: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polygon points="15.5 8.5 13.5 13.5 8.5 15.5 10.5 10.5 15.5 8.5"/></svg>`,
+      key: `<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l8-8"/><path d="M16 7l2 2"/><path d="M18 5l2 2"/></svg>`
+    };
+
+    /* =========================================
+       SCENE RENDERER
+       ========================================= */
+    const stageEl = document.getElementById('app-stage');
+
+    function goToStep(nextStep) {
+      const currentCard = stageEl.firstElementChild;
+      if (currentCard) {
+        currentCard.classList.add('fade-out');
+        setTimeout(() => {
+          state.step = nextStep;
+          saveState();
+          renderScene();
+        }, 420);
+      } else {
+        state.step = nextStep;
+        saveState();
+        renderScene();
+      }
+    }
+
+    function renderScene() {
+      updateInventoryUI();
+
+      switch (state.step) {
+        case 'intro':
+          stageEl.innerHTML = `
+            <section class="scene-card fade-in">
+              <div class="eyebrow">Four Trials · One Forgotten Poem</div>
+              <h1>The Garden of Things Unsaid</h1>
+              <p class="story-text">
+                "Beyond the frost-covered archways lies a quiet garden where words once left unspoken were sealed away. Complete the four trials, gather what was hidden, and unlock what has been waiting at the heart of the winter."
+              </p>
+              <button class="btn-primary" id="start-btn" type="button">Enter the Garden</button>
+            </section>
+          `;
+          document.getElementById('start-btn').addEventListener('click', () => {
+            playChime('soft');
+            goToStep('trial1');
+          });
+          break;
+
+        case 'trial1':
+          stageEl.innerHTML = `
+            <section class="scene-card fade-in" id="trial-card">
+              <div class="eyebrow">Trial 01 — The Forgotten Stars</div>
+              <h2>The Sealed Gate</h2>
+              <p class="story-text">
+                "The entrance to the garden has been sealed by an ancient spell. Four stars illuminate the gate, but the fifth has vanished. Restore the missing star to proceed."
+              </p>
+              <div class="puzzle-box">
+                <div class="puzzle-label">Complete the Sequence</div>
+                <div class="sequence-row">
+                  <div class="seq-tile">2</div>
+                  <div class="seq-tile">4</div>
+                  <div class="seq-tile">8</div>
+                  <div class="seq-tile">16</div>
+                  <div class="seq-tile mystery" id="star-slot">?</div>
+                </div>
+                <form class="input-group" id="t1-form">
+                  <input type="number" id="t1-input" placeholder="Next number" autocomplete="off" required />
+                  <button class="btn-primary" type="submit">Restore</button>
+                </form>
+                <div class="feedback-msg" id="t1-feedback"></div>
+              </div>
+              <div class="helper-row">
+                <button class="hint-toggle" type="button" onclick="toggleHint('hint1')">Need a gentle hint?</button>
+                <div class="hint-text" id="hint1">Each number is twice the previous number.</div>
+              </div>
+            </section>
+          `;
+          document.getElementById('t1-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const val = document.getElementById('t1-input').value.trim();
+            if (val === '32') {
+              document.getElementById('star-slot').textContent = '32';
+              state.relics.seed = true;
+              playChime('success');
+              setTimeout(() => goToStep('reward1'), 450);
+            } else {
+              triggerError('t1-feedback', 'Not quite—watch how each star doubles the light of the one before it.');
+            }
+          });
+          break;
+
+        case 'reward1':
+          stageEl.innerHTML = `
+            <section class="scene-card fade-in">
+              <div class="reward-view">
+                <div class="reward-icon-ring">${icons.seed}</div>
+                <div class="reward-badge">Relic Found · Golden Seed</div>
+                <h2>The Gate Illuminates</h2>
+                <p class="story-text">
+                  "The missing star flickers to life, the frost-covered gate swings open, and a warm golden seed drifts into your hand.<br><br>Every great thing begins somewhere. The garden remembers your first step."
+                </p>
+                <button class="btn-primary btn-gold" id="next-t2" type="button">Continue to Trial 02</button>
+              </div>
+            </section>
+          `;
+          document.getElementById('next-t2').addEventListener('click', () => goToStep('trial2'));
+          break;
+
+        case 'trial2':
+          stageEl.innerHTML = `
+            <section class="scene-card fade-in" id="trial-card">
+              <div class="eyebrow">Trial 02 — The Mirror Pond</div>
+              <h2>The Pond's Reflections</h2>
+              <p class="story-text">
+                "The pond reflects everything except the truth. Its waters have turned the words upside down. To discover what lies beneath, read what the water cannot hide."
+              </p>
+              <div class="puzzle-box">
+                <div class="puzzle-label">Which word gives light to the darkness?</div>
+                <div class="mirror-grid">
+                  <button class="choice-card" type="button" data-word="RETAW">RETAW</button>
+                  <button class="choice-card" type="button" data-word="ERIF">ERIF</button>
+                  <button class="choice-card" type="button" data-word="THGIL">THGIL</button>
+                </div>
+                <div class="feedback-msg" id="t2-feedback"></div>
+              </div>
+              <div class="helper-row">
+                <button class="hint-toggle" type="button" onclick="toggleHint('hint2')">Need a gentle hint?</button>
+                <div class="hint-text" id="hint2">Try reading each reflected word from right to left.</div>
+              </div>
+            </section>
+          `;
+          document.querySelectorAll('.choice-card').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const choice = btn.dataset.word;
+              if (choice === 'THGIL') {
+                btn.textContent = 'LIGHT';
+                btn.style.borderColor = 'var(--accent-gold)';
+                btn.style.color = 'var(--accent-gold)';
+                state.relics.mirror = true;
+                playChime('success');
+                setTimeout(() => goToStep('reward2'), 550);
+              } else {
+                const reversed = choice.split('').reverse().join('');
+                triggerError('t2-feedback', `That reflection spells "${reversed}"—look for the one that brings light.`);
+              }
+            });
+          });
+          break;
+
+        case 'reward2':
+          stageEl.innerHTML = `
+            <section class="scene-card fade-in">
+              <div class="reward-view">
+                <div class="reward-icon-ring">${icons.mirror}</div>
+                <div class="reward-badge">Relic Found · Silver Mirror</div>
+                <h2>Beneath the Ripples</h2>
+                <p class="story-text">
+                  "The frozen pond ripples, the reflected word glows bright, and a silver mirror rises smoothly from the water.<br><br>Sometimes, all it takes is looking at something differently."
+                </p>
+                <button class="btn-primary btn-gold" id="next-t3" type="button">Continue to Trial 03</button>
+              </div>
+            </section>
+          `;
+          document.getElementById('next-t3').addEventListener('click', () => goToStep('trial3'));
+          break;
+
+        case 'trial3':
+          stageEl.innerHTML = `
+            <section class="scene-card fade-in" id="trial-card">
+              <div class="eyebrow">Trial 03 — The Thorn Maze</div>
+              <h2>Three Inscriptions</h2>
+              <p class="story-text">
+                "Three gates stand before you. Only one leads deeper into the garden. The inscriptions hold the truth, but beware: only ONE of them speaks honestly."
+              </p>
+              <div class="puzzle-box">
+                <div class="puzzle-label">Exactly ONE inscription is true. Which gate hides the treasure?</div>
+                <div class="gates-list">
+                  <button class="gate-btn" type="button" data-gate="A">
+                    <span class="gate-title">GATE A</span>
+                    <span class="gate-quote">"The treasure is behind Gate B."</span>
+                  </button>
+                  <button class="gate-btn" type="button" data-gate="B">
+                    <span class="gate-title">GATE B</span>
+                    <span class="gate-quote">"The treasure is not behind Gate B."</span>
+                  </button>
+                  <button class="gate-btn" type="button" data-gate="C">
+                    <span class="gate-title">GATE C</span>
+                    <span class="gate-quote">"The treasure is not behind Gate A."</span>
+                  </button>
+                </div>
+                <div class="feedback-msg" id="t3-feedback"></div>
+              </div>
+              <div class="helper-row">
+                <button class="hint-toggle" type="button" onclick="toggleHint('hint3')">Need a gentle hint?</button>
+                <div class="hint-text" id="hint3">Imagine the treasure is behind each gate in turn, and count how many inscriptions would be true. Only one choice makes exactly one statement true.</div>
+              </div>
+            </section>
+          `;
+          document.querySelectorAll('.gate-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const gate = btn.dataset.gate;
+              if (gate === 'A') {
+                btn.style.borderColor = 'var(--accent-gold)';
+                state.relics.compass = true;
+                playChime('success');
+                setTimeout(() => goToStep('reward3'), 500);
+              } else {
+                triggerError('t3-feedback', `If it were behind Gate ${gate}, two inscriptions would be true at once. Try testing another gate.`);
+              }
+            });
+          });
+          break;
+
+        case 'reward3':
+          stageEl.innerHTML = `
+            <section class="scene-card fade-in">
+              <div class="reward-view">
+                <div class="reward-icon-ring">${icons.compass}</div>
+                <div class="reward-badge">Relic Found · Enchanted Compass</div>
+                <h2>The True Path</h2>
+                <p class="story-text">
+                  "Two gates quietly close, the true gate swings wide, and a golden compass spins gently into view.<br><br>Not every path is meant to be followed. Some are meant to be discovered."
+                </p>
+                <button class="btn-primary btn-gold" id="next-t4" type="button">Continue to Trial 04</button>
+              </div>
+            </section>
+          `;
+          document.getElementById('next-t4').addEventListener('click', () => goToStep('trial4'));
+          break;
+
+        case 'trial4':
+          stageEl.innerHTML = `
+            <section class="scene-card fade-in" id="trial-card">
+              <div class="eyebrow">Trial 04 — The Sleeping Library</div>
+              <h2>A Page from the Untitled Book</h2>
+              <p class="story-text">
+                "At the heart of the garden stands a library untouched by time. Its final book has no title, no author and no ending. Yet the answer has been waiting on its very first pages."
+              </p>
+              <div class="puzzle-box" style="background: transparent; border: none; padding: 0;">
+                <div class="book-page">
+                  <div class="book-header">Tap the three hidden letters in sequence</div>
+                  <div class="book-sub">Three lines. One hidden word.</div>
+                  <div class="book-line">
+                    <span class="first-letter" data-char="K" data-idx="0">K</span>eepers of secrets never reveal everything.
+                  </div>
+                  <div class="book-line">
+                    <span class="first-letter" data-char="E" data-idx="1">E</span>ven the oldest books hold their mysteries.
+                  </div>
+                  <div class="book-line">
+                    <span class="first-letter" data-char="Y" data-idx="2">Y</span>ou must look where every story begins.
+                  </div>
+                  <div class="seq-status">
+                    <span>Selected: <strong id="selected-word">—</strong></span>
+                    <button class="reset-letters" type="button" id="clear-letters">Clear</button>
+                  </div>
+                </div>
+                <div class="feedback-msg" id="t4-feedback"></div>
+              </div>
+              <div class="helper-row">
+                <button class="hint-toggle" type="button" onclick="toggleHint('hint4')">Need a gentle hint?</button>
+                <div class="hint-text" id="hint4">Read the beginnings, not the stories—tap the first letter of each line from top to bottom.</div>
+              </div>
+            </section>
+          `;
+          setupLibraryPuzzle();
+          break;
+
+        case 'reward4':
+          stageEl.innerHTML = `
+            <section class="scene-card fade-in">
+              <div class="reward-view">
+                <div class="reward-icon-ring">${icons.key}</div>
+                <div class="reward-badge">Relic Found · Antique Golden Key</div>
+                <h2>The Doors Unseal</h2>
+                <p class="story-text">
+                  "The three golden letters lift off the page and fuse together, opening the library doors to reveal an ancient chest.<br><br>You have gathered what was lost. Now, discover what was kept."
+                </p>
+                <button class="btn-primary btn-gold" id="next-chamber" type="button">Enter the Final Chamber</button>
+              </div>
+            </section>
+          `;
+          document.getElementById('next-chamber').addEventListener('click', () => goToStep('chamber'));
+          break;
+
+        case 'chamber':
+          stageEl.innerHTML = `
+            <section class="scene-card fade-in">
+              <div class="eyebrow">The Final Chamber</div>
+              <h2>The Garden Remembers</h2>
+              <p class="story-text">
+                "Four trials completed. Where winter once held every branch in frost, all four relics come together before the locked chest."
+              </p>
+              <div class="chamber-relics">
+                <div class="relic-tile">${icons.seed}<span>Seed</span></div>
+                <div class="relic-tile">${icons.mirror}<span>Mirror</span></div>
+                <div class="relic-tile">${icons.compass}<span>Compass</span></div>
+                <div class="relic-tile">${icons.key}<span>Key</span></div>
+              </div>
+              <div style="text-align: center; margin-top: 24px;">
+                <button class="btn-primary btn-gold" id="turn-key-btn" type="button">Turn the Key & Open the Chest</button>
+              </div>
+            </section>
+          `;
+          document.getElementById('turn-key-btn').addEventListener('click', () => {
+            playChime('finale');
+            goToStep('letter');
+          });
+          break;
+
+        case 'letter':
+          stageEl.innerHTML = `
+            <article class="parchment-sheet fade-in">
+              <h2>Before you read...</h2>
+              <div class="letter-body">
+                <p>I have something I'd like to share with you.</p>
+                <p>What you've unlocked is actually quite special to me. It's the very first poem I ever wrote about you.</p>
+                <p>I wrote it when I was just beginning to develop feelings for you, before we were together, when you were still someone I was quietly getting to know and finding myself thinking about a little more than I expected.</p>
+                <p>I didn't know where those feelings would lead, or whether they'd ever become anything more. I simply had something on my mind that I wanted to put into words.</p>
+                <p>Looking back now, I find it quite special that these words existed before everything that followed. They're a little glimpse into a version of me who had no idea what was waiting around the corner.</p>
+                <p>I wanted you to have it. Not because it's perfect, but because it's yours, and because it's a little piece of the beginning that I get to share with you now.</p>
+              </div>
+              <hr class="parchment-divider" />
+              <div class="parchment-footer-note">Somewhere, a story had already begun.</div>
+              <div style="text-align: center;">
+                <button class="btn-primary btn-gold" id="read-poem-btn" type="button">Unfold the Poem</button>
+              </div>
+            </article>
+          `;
+          document.getElementById('read-poem-btn').addEventListener('click', () => {
+            playChime('soft');
+            goToStep('poem');
+          });
+          break;
+
+        case 'poem':
+          stageEl.innerHTML = `
+            <article class="parchment-sheet fade-in">
+              <div class="poem-title" id="poem-title">HEAT</div>
+
+              <div class="stanza" data-stanza="0">
+                I've never liked the heat<br>
+                But lately I've found comfort in it<br>
+                Needed the warmth<br>
+                But hardly ever drawn to it.
+              </div>
+
+              <div class="stanza" data-stanza="1">
+                That was until I met the sun<br>
+                The antithesis to my winter<br>
+                His presence felt like a long awaited hug<br>
+                Bound to me. Never leaving<br>
+                Somewhat, like a splinter.
+              </div>
+
+              <div class="stanza" data-stanza="2">
+                I didn't realise what I was missing<br>
+                Because I never had it to begin with<br>
+                Picture a hot cup of coffee<br>
+                On a freezing, frosty evening.
+              </div>
+
+              <div class="stanza" data-stanza="3">
+                The cold hands find warmth<br>
+                And forget why they were numb<br>
+                Similarly I've forgotten my despairs<br>
+                Giving me strength to overcome.
+              </div>
+
+              <div class="stanza" data-stanza="4">
+                If you asked me again,<br>
+                Which season feels like home<br>
+                My answer hasn't changed to summer, spring or "fall"<br>
+                Because if I was not one with the cold<br>
+                I never would have needed the heat at all
+              </div>
+
+              <div class="poem-postscript" id="poem-end">
+                <hr class="parchment-divider" />
+                <div class="parchment-footer-note">Written before I knew how the story would unfold.</div>
+                <div style="text-align: center;">
+                  <button class="btn-primary" id="back-letter-btn" type="button" style="background: #dfd0b4; color: #3b2d22;">Re-read Note</button>
+                </div>
+              </div>
+            </article>
+          `;
+          revealPoemStanzas();
+          document.getElementById('back-letter-btn').addEventListener('click', () => goToStep('letter'));
+          break;
+      }
+    }
+
+    function setupLibraryPuzzle() {
+      let picked = [];
+      const letters = document.querySelectorAll('.first-letter');
+      const statusEl = document.getElementById('selected-word');
+
+      function resetSelection() {
+        picked = [];
+        letters.forEach(l => l.classList.remove('selected'));
+        statusEl.textContent = '—';
+      }
+
+      document.getElementById('clear-letters').addEventListener('click', resetSelection);
+
+      letters.forEach(el => {
+        el.addEventListener('click', () => {
+          const idx = el.dataset.idx;
+          if (picked.some(item => item.idx === idx)) return;
+
+          el.classList.add('selected');
+          picked.push({ idx, char: el.dataset.char });
+          const currentWord = picked.map(i => i.char).join('');
+          statusEl.textContent = currentWord;
+
+          if (picked.length === 3) {
+            if (currentWord === 'KEY') {
+              state.relics.key = true;
+              playChime('success');
+              setTimeout(() => goToStep('reward4'), 500);
+            } else {
+              triggerError('t4-feedback', `"${currentWord}" isn't quite right—try tapping them in order from the first line down.`);
+              setTimeout(resetSelection, 750);
+            }
+          }
+        });
+      });
+    }
+
+    function revealPoemStanzas() {
+      const title = document.getElementById('poem-title');
+      const stanzas = document.querySelectorAll('.stanza');
+      const endNote = document.getElementById('poem-end');
+
+      setTimeout(() => title && title.classList.add('revealed'), 200);
+
+      stanzas.forEach((stanza, index) => {
+        setTimeout(() => {
+          stanza.classList.add('revealed');
+        }, 750 + index * 950);
+      });
+
+      setTimeout(() => {
+        if (endNote) endNote.classList.add('revealed');
+      }, 750 + stanzas.length * 950 + 300);
+    }
+
+    function triggerError(feedbackId, message) {
+      const fb = document.getElementById(feedbackId);
+      const card = document.getElementById('trial-card');
+      if (fb) fb.textContent = message;
+      if (card) {
+        card.classList.remove('shake');
+        void card.offsetWidth;
+        card.classList.add('shake');
+      }
+    }
+
+    function toggleHint(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('visible');
+    }
+
+    document.getElementById('reset-progress').addEventListener('click', () => {
+      localStorage.removeItem(STORAGE_KEY);
+      state = {
+        step: 'intro',
+        relics: { seed: false, mirror: false, compass: false, key: false }
+      };
+      saveState();
+      goToStep('intro');
+    });
+
+    // Boot
+    renderScene();
+  </script>
+</body>
+</html>
