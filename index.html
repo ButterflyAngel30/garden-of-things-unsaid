@@ -678,7 +678,22 @@
       font-size: 1.15rem;
       color: #6b4f35;
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 14px;
+    }
+
+    .bonus-invite {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 1.22rem;
+      line-height: 1.55;
+      color: #4b331d;
+      text-align: center;
+      background: rgba(212, 155, 56, 0.12);
+      border: 1px solid rgba(133, 107, 77, 0.24);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin: 0 auto 22px;
+      max-width: 480px;
     }
 
     /* Poem Stanza Fade-In */
@@ -821,7 +836,7 @@
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
-          // Security check: prevent jumping to chamber/letter/poem without all 4 relics
+          // Prevent jumping to chamber/letter/poem without all 4 relics
           const hasAll = parsed.relics && parsed.relics.seed && parsed.relics.mirror && parsed.relics.compass && parsed.relics.key;
           if (['chamber', 'letter', 'poem'].includes(parsed.step) && !hasAll) {
             return { ...defaultState };
@@ -932,7 +947,6 @@
       particles.forEach(p => {
         p.phase += 0.015;
         if (isSpring) {
-          // Warm rising golden motes & floating petals
           p.y -= p.speedY * 0.75;
           p.x += Math.sin(p.phase) * 0.55;
           if (p.y < -10) {
@@ -941,7 +955,6 @@
           }
           ctx.fillStyle = `rgba(255, 218, 145, ${p.alpha})`;
         } else {
-          // Gentle winter frost drifting down
           p.y += p.speedY;
           p.x += Math.sin(p.phase) * 0.35 + p.speedX;
           if (p.y > canvas.height + 10) {
@@ -1343,6 +1356,9 @@
               <div class="poem-postscript" id="poem-end">
                 <hr class="parchment-divider" />
                 <div class="parchment-footer-note">Written before I knew how the story would unfold.</div>
+                <div class="bonus-invite">
+                  A few quiet petals are still tucked in the garden—if you want a bonus poem, text me.
+                </div>
                 <div style="text-align: center;">
                   <button class="btn-primary" id="back-letter-btn" type="button" style="background: #dfd0b4; color: #3b2d22;">Re-read Note</button>
                 </div>
